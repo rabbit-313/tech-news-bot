@@ -7,6 +7,8 @@ class Config:
     
     # Slack設定
     SLACK_WEBHOOK_URL: Optional[str] = os.getenv('SLACK_WEBHOOK_URL')
+    SLACK_BOT_TOKEN: Optional[str] = os.getenv('SLACK_BOT_TOKEN')
+    SLACK_CHANNEL: str = os.getenv('SLACK_CHANNEL', '#general')
     
     # GitHub設定
     GITHUB_TOKEN: Optional[str] = os.getenv('GITHUB_TOKEN')
