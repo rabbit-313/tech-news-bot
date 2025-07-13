@@ -1,0 +1,43 @@
+name: Tech News Collection
+
+on:
+  schedule:
+    - cron: '0 1 * * *'    # 10:00 JST (毎日)
+    - cron: '0 10 * * *'   # 19:00 JST (毎日)
+  workflow_dispatch:       # 手動実行可能
+
+jobs:
+  collect-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        
+    - name: Run news collection
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+        REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      run: |
+        python main.py
+        
+    - name: Upload logs (on failure)
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: error-logs
+        path: logs/
+        retention-days: 7
