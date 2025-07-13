@@ -14,13 +14,61 @@ class SlackNotifier:
     def __init__(self):
         self.logger = setup_logger("slack_notifier")
         self.webhook_url = Config.SLACK_WEBHOOK_URL
+        self.bot_token = Config.SLACK_BOT_TOKEN
+        self.channel = Config.SLACK_CHANNEL
     
     def send_daily_summary(self, articles: List[Article]) -> bool:
         """日次サマリーをSlackに送信"""
-        if not self.webhook_url:
-            self.logger.error("Slack webhook URL not configured")
+        # Bot Token が利用可能な場合はそちらを優先
+        if self.bot_token:
+            return self._send_via_bot_token(articles)
+        elif self.webhook_url:
+            return self._send_via_webhook(articles)
+        else:
+            self.logger.error("Neither Slack bot token nor webhook URL configured")
             return False
         
+    def _send_via_bot_token(self, articles: List[Article]) -> bool:
+        """Bot Tokenを使用してSlackに送信"""
+        if not articles:
+            self.logger.info("No articles to send")
+            return True
+        
+        try:
+            # 記事数を制限
+            top_articles = articles[:Config.MAX_ARTICLES_PER_NOTIFICATION]
+            
+            # メッセージ作成
+            message = self._create_summary_message(top_articles)
+            
+            # Slack API送信
+            response = requests.post(
+                "https://slack.com/api/chat.postMessage",
+                headers={
+                    'Authorization': f'Bearer {self.bot_token}',
+                    'Content-Type': 'application/json'
+                },
+                data=json.dumps({
+                    'channel': self.channel,
+                    'blocks': message['blocks']
+                }),
+                timeout=30
+            )
+            
+            result = response.json()
+            if result.get('ok'):
+                self.logger.info(f"Successfully sent {len(top_articles)} articles to Slack via bot token")
+                return True
+            else:
+                self.logger.error(f"Failed to send to Slack: {result.get('error', 'Unknown error')}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error sending to Slack via bot token: {e}")
+            return False
+    
+    def _send_via_webhook(self, articles: List[Article]) -> bool:
+        """Webhookを使用してSlackに送信"""
         if not articles:
             self.logger.info("No articles to send")
             return True
@@ -41,14 +89,14 @@ class SlackNotifier:
             )
             
             if response.status_code == 200:
-                self.logger.info(f"Successfully sent {len(top_articles)} articles to Slack")
+                self.logger.info(f"Successfully sent {len(top_articles)} articles to Slack via webhook")
                 return True
             else:
                 self.logger.error(f"Failed to send to Slack: {response.status_code} - {response.text}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Error sending to Slack: {e}")
+            self.logger.error(f"Error sending to Slack via webhook: {e}")
             return False
     
     def _create_summary_message(self, articles: List[Article]) -> dict:
