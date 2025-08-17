@@ -1,10 +1,10 @@
 name: Tech News Collection
 
-on:
-  schedule:
-    - cron: '0 1 * * *'    # 10:00 JST (毎日)
-    - cron: '0 10 * * *'   # 19:00 JST (毎日)
-  workflow_dispatch:       # 手動実行可能
+# on:
+#   schedule:
+#     - cron: '0 1 * * *'    # 10:00 JST (毎日)
+#     - cron: '0 10 * * *'   # 19:00 JST (毎日)
+#   workflow_dispatch:       # 手動実行可能
 
 jobs:
   collect-and-notify:
